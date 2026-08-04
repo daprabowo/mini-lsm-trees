@@ -1,7 +1,11 @@
 pub mod builder;
 pub mod iterator;
 
+use std::sync::Arc;
+
 use bytes::Bytes;
+
+pub type BlockCache = moka::sync::Cache<(usize, usize), Arc<Block>>;
 
 /// A block is the smallest unit of read and caching in LSM tree. It is a collection of sorted
 /// key-value pairs.
@@ -12,8 +16,8 @@ pub struct Block {
 
 impl Block {
     /// Encode the internal data to the data layout illustrated in the course
-    /// Note: You may want to recheck if any of the expected field is missing from your output
     pub fn encode(&self) -> Bytes {
+        // NOTE: You may want to recheck if any of the expected field is missing from your output
         unimplemented!()
     }
 

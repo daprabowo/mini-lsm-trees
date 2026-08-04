@@ -51,8 +51,8 @@ impl BlockIterator {
     }
 
     /// Returns true if the iterator is valid.
-    /// Note: You may want to make use of `key`
     pub fn is_valid(&self) -> bool {
+        // NOTE: You may want to make use of `key`
         unimplemented!()
     }
 
@@ -67,9 +67,9 @@ impl BlockIterator {
     }
 
     /// Seek to the first key that >= `key`.
-    /// Note: You should assume the key-value pairs in the block are sorted when being added by
-    /// callers
     pub fn seek_to_key(&mut self, key: KeySlice) {
+        // NOTE: You should assume the key-value pairs in the block are sorted when being added by
+        // callers
         unimplemented!()
     }
 }
