@@ -1,4 +1,5 @@
 pub(crate) mod bloom;
+mod builder;
 
 use std::{fs::File, os::unix::fs::FileExt, path::Path, sync::Arc};
 
@@ -79,7 +80,7 @@ impl FileObject {
 }
 
 pub struct SsTable {
-    /// The actual storage unit of SsTable.
+    /// The actual storage unit of SSTable.
     pub(crate) file: FileObject,
     /// The meta blocks that hold info for data blocks.
     pub(crate) block_meta: Vec<BlockMeta>,
