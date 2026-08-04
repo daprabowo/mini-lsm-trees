@@ -1,6 +1,18 @@
-[package]
-name = "mini-lsm-trees"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members       = ["mini-lsm", "xtask"]
+resolver      = "3"
 
-[dependencies]
+[workspace.package]
+version       = "0.1.0"
+edition       = "2024"
+rust-version  = "1.97.1"
+homepage      = "https://github.com/daprabowo/mini-lsm-trees"
+keywords      = ["storage", "database", "tutorial", "course"]
+repository    = "https://github.com/daprabowo/mini-lsm-trees"
+
+[workspace.dependencies]
+anyhow        = "1"
+bytes         = "1"
+clap          = { version = "4", features = ["derive"] }
+console       = "0.16"
+duct          = "1"

@@ -1,0 +1,15 @@
+[package]
+name          = "mini-lsm-xtask"
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+homepage      = { workspace = true }
+keywords      = { workspace = true }
+repository    = { workspace = true }
+publish       = false
+
+[dependencies]
+anyhow        = { workspace = true } 
+clap          = { workspace = true } 
+console       = { workspace = true } 
+duct          = { workspace = true } 
