@@ -2,19 +2,15 @@ mod leveled;
 mod simple_leveled;
 mod tiered;
 
+pub use leveled::{LeveledCompactionController, LeveledCompactionOptions, LeveledCompactionTask};
+pub use simple_leveled::{
+    SimpleLeveledCompactionController, SimpleLeveledCompactionOptions, SimpleLeveledCompactionTask,
+};
+pub use tiered::{TieredCompactionController, TieredCompactionOptions, TieredCompactionTask};
+
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    compact::{
-        leveled::{LeveledCompactionController, LeveledCompactionOptions, LeveledCompactionTask},
-        simple_leveled::{
-            SimpleLeveledCompactionController, SimpleLeveledCompactionOptions,
-            SimpleLeveledCompactionTask,
-        },
-        tiered::{TieredCompactionController, TieredCompactionOptions, TieredCompactionTask},
-    },
-    lsm_storage::LsmStorageState,
-};
+use crate::lsm_storage::LsmStorageState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CompactionTask {
