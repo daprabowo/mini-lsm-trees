@@ -2,6 +2,9 @@ pub(crate) mod bloom;
 mod builder;
 mod iterator;
 
+pub use builder::SsTableBuilder;
+pub use iterator::SsTableIterator;
+
 use std::{fs::File, os::unix::fs::FileExt, path::Path, sync::Arc};
 
 use anyhow::Result;
