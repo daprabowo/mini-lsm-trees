@@ -14,10 +14,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    iterators::StorageIterator,
-    key::KeySlice,
     lsm_storage::{LsmStorageInner, LsmStorageState},
-    table::{SsTable, SsTableBuilder},
+    table::SsTable,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
