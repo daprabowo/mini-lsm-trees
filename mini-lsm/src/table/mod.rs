@@ -1,5 +1,6 @@
 pub(crate) mod bloom;
 mod builder;
+mod iterator;
 
 use std::{fs::File, os::unix::fs::FileExt, path::Path, sync::Arc};
 
