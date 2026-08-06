@@ -201,7 +201,7 @@ impl LsmStorageInner {
         K: AsRef<[u8]>,
         V: AsRef<[u8]>,
     {
-        let state = self.state.write();
+        let state = self.state.read();
         state.memtable.put(key, value)
     }
 
@@ -210,7 +210,7 @@ impl LsmStorageInner {
     where
         K: AsRef<[u8]>,
     {
-        let state = self.state.write();
+        let state = self.state.read();
         state.memtable.put(key, [])
     }
 
