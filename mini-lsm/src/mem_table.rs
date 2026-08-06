@@ -9,7 +9,7 @@ use bytes::Bytes;
 use crossbeam_skiplist::SkipMap;
 use ouroboros::self_referencing;
 
-use crate::{iterators::StorageIterator, key::KeySlice, wal::Wal};
+use crate::{iterators::StorageIterator, key::KeySlice, table::SsTableBuilder, wal::Wal};
 
 /// A basic mem-table based on crossbeam-skiplist.
 pub struct MemTable {
@@ -30,8 +30,13 @@ pub(crate) fn map_bound(bound: Bound<&[u8]>) -> Bound<Bytes> {
 
 impl MemTable {
     /// Create a new mem-table
-    pub fn create(_id: usize) -> Self {
-        unimplemented!()
+    pub fn create(id: usize) -> Self {
+        Self {
+            map: Arc::new(SkipMap::new()),
+            wal: None,
+            id,
+            approximate_size: Arc::new(AtomicUsize::new(0)),
+        }
     }
 
     /// Create a new mem-table with WAL
@@ -67,13 +72,26 @@ impl MemTable {
     }
 
     /// Get a value by key.
-    pub fn get(&self, key: &[u8]) -> Option<Bytes> {
-        unimplemented!()
+    pub fn get<K>(&self, key: K) -> Option<Bytes>
+    where
+        K: AsRef<[u8]>,
+    {
+        self.map
+            .get(key.as_ref())
+            .map(|entry| entry.value().clone())
     }
 
     /// Put a key-value pair into the mem-table
-    pub fn put(&self, key: &[u8], value: &[u8]) -> Result<()> {
-        unimplemented!()
+    pub fn put<K, V>(&self, key: K, value: V) -> Result<()>
+    where
+        K: AsRef<[u8]>,
+        V: AsRef<[u8]>,
+    {
+        self.map.insert(
+            Bytes::copy_from_slice(key.as_ref()),
+            Bytes::copy_from_slice(value.as_ref()),
+        );
+        Ok(())
     }
 
     pub fn put_batch(&self, data: &[(KeySlice, &[u8])]) -> Result<()> {
@@ -92,10 +110,10 @@ impl MemTable {
         unimplemented!()
     }
 
-    // /// Flush the mem-table to SSTable.
-    // pub fn flush(&self, builder: &mut SsTableBuilder) -> Result<()> {
-    //     unimplemented!()
-    // }
+    /// Flush the mem-table to SSTable.
+    pub fn flush(&self, builder: &mut SsTableBuilder) -> Result<()> {
+        unimplemented!()
+    }
 
     pub fn id(&self) -> usize {
         self.id
