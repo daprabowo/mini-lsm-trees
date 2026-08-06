@@ -23,50 +23,6 @@ use crate::{
     table::SsTable,
 };
 
-/// Represents the state of the storage engine.
-pub struct LsmStorageState {
-    /// The current memtable.
-    pub memtable: Arc<MemTable>,
-    /// Immutable memtable, from latest to earliest.
-    pub imm_memtable: Vec<Arc<MemTable>>,
-    /// L0 SSTs, from latest to earlies.
-    pub l0_sstables: Vec<usize>,
-    /// SsTables sorted by key range; L1 - L_max for leveled compaction, or tiers for tiered
-    /// compaction
-    pub levels: Vec<(usize, Vec<usize>)>,
-    /// SST object
-    pub sstables: HashMap<usize, Arc<SsTable>>,
-}
-
-impl LsmStorageState {
-    fn create(options: &LsmStorageOptions) -> Self {
-        let levels = match &options.compaction_options {
-            CompactionOptions::Leveled(LeveledCompactionOptions { max_levels, .. })
-            | CompactionOptions::Simple(SimpleLeveledCompactionOptions { max_levels, .. }) => (1
-                ..=*max_levels)
-                .map(|level| (level, Vec::new()))
-                .collect::<Vec<_>>(),
-            CompactionOptions::Tiered(_) => Vec::new(),
-            CompactionOptions::NoCompaction => vec![(1, Vec::new())],
-        };
-        Self {
-            memtable: Arc::new(MemTable::create(0)),
-            imm_memtable: Vec::new(),
-            l0_sstables: Vec::new(),
-            levels,
-            sstables: Default::default(),
-        }
-    }
-}
-
-pub enum WriteBatchRecord<T>
-where
-    T: AsRef<[u8]>,
-{
-    Put(T, T),
-    Del(T),
-}
-
 #[derive(Debug, Clone)]
 pub struct LsmStorageOptions {
     pub block_size: usize,
@@ -109,6 +65,50 @@ impl LsmStorageOptions {
             serializable: false,
         }
     }
+}
+
+/// Represents the state of the storage engine.
+pub struct LsmStorageState {
+    /// The current memtable.
+    pub memtable: Arc<MemTable>,
+    /// Immutable memtable, from latest to earliest.
+    pub imm_memtable: Vec<Arc<MemTable>>,
+    /// L0 SSTs, from latest to earlies.
+    pub l0_sstables: Vec<usize>,
+    /// SsTables sorted by key range; L1 - L_max for leveled compaction, or tiers for tiered
+    /// compaction
+    pub levels: Vec<(usize, Vec<usize>)>,
+    /// SST object
+    pub sstables: HashMap<usize, Arc<SsTable>>,
+}
+
+impl LsmStorageState {
+    fn create(options: &LsmStorageOptions) -> Self {
+        let levels = match &options.compaction_options {
+            CompactionOptions::Leveled(LeveledCompactionOptions { max_levels, .. })
+            | CompactionOptions::Simple(SimpleLeveledCompactionOptions { max_levels, .. }) => (1
+                ..=*max_levels)
+                .map(|level| (level, Vec::new()))
+                .collect::<Vec<_>>(),
+            CompactionOptions::Tiered(_) => Vec::new(),
+            CompactionOptions::NoCompaction => vec![(1, Vec::new())],
+        };
+        Self {
+            memtable: Arc::new(MemTable::create(0)),
+            imm_memtable: Vec::new(),
+            l0_sstables: Vec::new(),
+            levels,
+            sstables: Default::default(),
+        }
+    }
+}
+
+pub enum WriteBatchRecord<T>
+where
+    T: AsRef<[u8]>,
+{
+    Put(T, T),
+    Del(T),
 }
 
 #[derive(Clone, Debug)]
@@ -186,8 +186,32 @@ impl LsmStorageInner {
     }
 
     /// Get a key from the storage.
-    pub fn get(&self, _key: &[u8]) -> Result<Option<Bytes>> {
-        unimplemented!()
+    pub fn get<K>(&self, key: K) -> Result<Option<Bytes>>
+    where
+        K: AsRef<[u8]>,
+    {
+        let state = self.state.read();
+        let value = state.memtable.get(key).filter(|bytes| !bytes.is_empty());
+        Ok(value)
+    }
+
+    /// Put a key-value pair into the storage by writing into the current memtable.
+    pub fn put<K, V>(&self, key: K, value: V) -> Result<()>
+    where
+        K: AsRef<[u8]>,
+        V: AsRef<[u8]>,
+    {
+        let state = self.state.write();
+        state.memtable.put(key, value)
+    }
+
+    /// Remove a key from the storage by writing an empty value.
+    pub fn delete<K>(&self, key: K) -> Result<()>
+    where
+        K: AsRef<[u8]>,
+    {
+        let state = self.state.write();
+        state.memtable.put(key, [])
     }
 
     /// Write a batch of data into the storage.
@@ -195,16 +219,6 @@ impl LsmStorageInner {
     where
         T: AsRef<[u8]>,
     {
-        unimplemented!()
-    }
-
-    /// Put a key-value pair into the storage by writing into the current memtable.
-    pub fn put(&self, _key: &[u8], _value: &[u8]) -> Result<()> {
-        unimplemented!()
-    }
-
-    /// Remove a key from the storage by writing an empty value.
-    pub fn delete(&self, _key: &[u8]) -> Result<()> {
         unimplemented!()
     }
 
