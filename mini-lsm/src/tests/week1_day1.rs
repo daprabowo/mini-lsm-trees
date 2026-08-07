@@ -51,6 +51,17 @@ fn test_task1_memtable_overwrite() {
 }
 
 #[test]
+fn test_memtable_operation_order() {
+    let memtable1 = MemTable::create(1);
+    memtable1.for_testing_put_slice(b"key1", b"value1").unwrap();
+    memtable1.for_testing_put_slice(b"key1", b"").unwrap();
+    let memtable2 = MemTable::create(2);
+    memtable2.for_testing_put_slice(b"key1", b"").unwrap();
+    memtable2.for_testing_put_slice(b"key1", b"value1").unwrap();
+    assert!(memtable1.for_testing_get_slice(b"key1") != memtable2.for_testing_get_slice(b"key1"));
+}
+
+#[test]
 fn test_task2_storage_integration() {
     let dir = tempdir().unwrap();
     let storage = Arc::new(
