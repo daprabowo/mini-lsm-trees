@@ -26,18 +26,19 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct LsmStorageOptions {
     pub block_size: usize,
-    pub target_sst_size: usize,
-    pub num_memtable_limit: usize,
+    pub sst_size_target: usize,
+    pub memtable_count_limit: usize,
     pub compaction_options: CompactionOptions,
     pub enable_wal: bool,
     pub serializable: bool,
 }
+
 impl LsmStorageOptions {
     pub fn default_for_week1_test() -> Self {
         Self {
             block_size: 4096,
-            target_sst_size: 2 << 20,
-            num_memtable_limit: 50,
+            sst_size_target: 2 << 20,
+            memtable_count_limit: 50,
             compaction_options: CompactionOptions::NoCompaction,
             enable_wal: false,
             serializable: false,
@@ -47,8 +48,8 @@ impl LsmStorageOptions {
     pub fn default_for_week1_day6_test() -> Self {
         Self {
             block_size: 4096,
-            target_sst_size: 2 << 20,
-            num_memtable_limit: 2,
+            sst_size_target: 2 << 20,
+            memtable_count_limit: 2,
             compaction_options: CompactionOptions::NoCompaction,
             enable_wal: false,
             serializable: false,
@@ -58,8 +59,8 @@ impl LsmStorageOptions {
     pub fn default_for_week2_test(compaction_options: CompactionOptions) -> Self {
         Self {
             block_size: 4096,
-            target_sst_size: 2 << 20,
-            num_memtable_limit: 2,
+            sst_size_target: 2 << 20,
+            memtable_count_limit: 2,
             compaction_options,
             enable_wal: false,
             serializable: false,
@@ -68,13 +69,14 @@ impl LsmStorageOptions {
 }
 
 /// Represents the state of the storage engine.
+#[derive(Clone)]
 pub struct LsmStorageState {
     /// The current memtable.
     pub memtable: Arc<MemTable>,
     /// Immutable memtable, from latest to earliest.
-    pub imm_memtable: Vec<Arc<MemTable>>,
+    pub memtable_imm: Vec<Arc<MemTable>>,
     /// L0 SSTs, from latest to earlies.
-    pub l0_sstables: Vec<usize>,
+    pub sstables_l0: Vec<usize>,
     /// SsTables sorted by key range; L1 - L_max for leveled compaction, or tiers for tiered
     /// compaction
     pub levels: Vec<(usize, Vec<usize>)>,
@@ -95,8 +97,8 @@ impl LsmStorageState {
         };
         Self {
             memtable: Arc::new(MemTable::create(0)),
-            imm_memtable: Vec::new(),
-            l0_sstables: Vec::new(),
+            memtable_imm: Vec::new(),
+            sstables_l0: Vec::new(),
             levels,
             sstables: Default::default(),
         }
@@ -124,28 +126,16 @@ pub(crate) struct LsmStorageInner {
     pub(crate) block_cache: Arc<BlockCache>,
     next_sst_id: AtomicUsize,
     pub(crate) options: Arc<LsmStorageOptions>,
-    pub(crate) compaction_controller: CompactionController,
     pub(crate) manifest: Option<Manifest>,
     pub(crate) mvcc: Option<LsmMvccInner>,
+    pub(crate) compaction_controller: CompactionController,
     pub(crate) compaction_filters: Arc<Mutex<Vec<CompactionFilter>>>,
 }
 
 impl LsmStorageInner {
-    pub(crate) fn next_sst_id(&self) -> usize {
-        self.next_sst_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-    }
-
-    pub(crate) fn mvcc(&self) -> &LsmMvccInner {
-        self.mvcc.as_ref().unwrap()
-    }
-
     /// Start the storage engine by either loading an existing directory or creating a new one if
     /// the directory does not exist.
-    pub(crate) fn open<P>(path: P, options: LsmStorageOptions) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
+    pub(crate) fn open(path: impl AsRef<Path>, options: LsmStorageOptions) -> Result<Self> {
         let path = path.as_ref();
         let state = LsmStorageState::create(&options);
 
@@ -169,11 +159,20 @@ impl LsmStorageInner {
             block_cache: Arc::new(BlockCache::new(1024)),
             next_sst_id: AtomicUsize::new(1),
             options: options.into(),
-            compaction_controller,
             manifest: None,
             mvcc: None,
+            compaction_controller,
             compaction_filters: Arc::new(Mutex::new(Vec::new())),
         })
+    }
+
+    pub(crate) fn next_sst_id(&self) -> usize {
+        self.next_sst_id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    }
+
+    pub(crate) fn mvcc(&self) -> &LsmMvccInner {
+        self.mvcc.as_ref().unwrap()
     }
 
     pub fn sync(&self) -> Result<()> {
@@ -185,24 +184,41 @@ impl LsmStorageInner {
         compaction_filters.push(compaction_filter)
     }
 
+    fn snapshot_state(&self) -> Arc<LsmStorageState> {
+        let guard = self.state.read();
+        Arc::clone(&guard)
+    }
+
     /// Get a key from the storage.
-    pub fn get<K>(&self, key: K) -> Result<Option<Bytes>>
-    where
-        K: AsRef<[u8]>,
-    {
-        let state = self.state.read();
-        let value = state.memtable.get(key).filter(|bytes| !bytes.is_empty());
-        Ok(value)
+    pub fn get(&self, key: impl AsRef<[u8]>) -> Result<Option<Bytes>> {
+        let key = key.as_ref();
+        let snapshot = self.snapshot_state();
+
+        let value = match snapshot.memtable.get(key.as_ref()) {
+            Some(val) => Some(val),
+            None => snapshot
+                .memtable_imm
+                .iter()
+                .find_map(|memtable| memtable.get(key.as_ref())),
+        };
+
+        Ok(value.filter(|bytes| !bytes.is_empty()))
     }
 
     /// Put a key-value pair into the storage by writing into the current memtable.
-    pub fn put<K, V>(&self, key: K, value: V) -> Result<()>
-    where
-        K: AsRef<[u8]>,
-        V: AsRef<[u8]>,
-    {
-        let state = self.state.read();
-        state.memtable.put(key, value)
+    pub fn put(&self, key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> Result<()> {
+        let snapshot = self.snapshot_state();
+        snapshot.memtable.put(key, value)?;
+
+        if snapshot.memtable.approximate_size() >= self.options.sst_size_target {
+            let state_lock = self.state_lock.lock();
+
+            if self.snapshot_state().memtable.approximate_size() >= self.options.sst_size_target {
+                return self.force_freeze_memtable(&state_lock);
+            }
+        }
+
+        Ok(())
     }
 
     /// Remove a key from the storage by writing an empty value.
@@ -210,8 +226,7 @@ impl LsmStorageInner {
     where
         K: AsRef<[u8]>,
     {
-        let state = self.state.read();
-        state.memtable.put(key, [])
+        self.put(key, [])
     }
 
     /// Write a batch of data into the storage.
@@ -222,26 +237,26 @@ impl LsmStorageInner {
         unimplemented!()
     }
 
-    pub(crate) fn path_of_sst_static<P>(path: P, id: usize) -> PathBuf
+    pub(crate) fn sst_path_static<P>(path: P, id: usize) -> PathBuf
     where
         P: AsRef<Path>,
     {
         path.as_ref().join(format!("{:05}.sst", id))
     }
 
-    pub(crate) fn path_of_sst(&self, id: usize) -> PathBuf {
-        Self::path_of_sst_static(&self.path, id)
+    pub(crate) fn sst_path(&self, id: usize) -> PathBuf {
+        Self::sst_path_static(&self.path, id)
     }
 
-    pub(crate) fn path_of_wal_static<P>(path: P, id: usize) -> PathBuf
+    pub(crate) fn wal_path_static<P>(path: P, id: usize) -> PathBuf
     where
         P: AsRef<Path>,
     {
         path.as_ref().join(format!("{:05}.wal", id))
     }
 
-    pub(crate) fn path_of_wal(&self, id: usize) -> PathBuf {
-        Self::path_of_wal_static(&self.path, id)
+    pub(crate) fn wal_path(&self, id: usize) -> PathBuf {
+        Self::wal_path_static(&self.path, id)
     }
 
     pub(super) fn sync_dir(&self) -> Result<()> {
@@ -250,11 +265,20 @@ impl LsmStorageInner {
 
     /// Force freeze the current memtable to an immutable memtable.
     pub fn force_freeze_memtable(&self, _state_lock_observer: &MutexGuard<'_, ()>) -> Result<()> {
-        unimplemented!()
+        let id = self.next_sst_id();
+        let memtable = Arc::new(MemTable::create_with_wal(id, self.wal_path(id))?);
+        {
+            let mut guard = self.state.write();
+            let mut snapshot = guard.as_ref().clone();
+            let memtable_old = std::mem::replace(&mut snapshot.memtable, memtable);
+            snapshot.memtable_imm.insert(0, memtable_old);
+            *guard = Arc::new(snapshot);
+        }
+        Ok(())
     }
 
     /// Force flush the earliest-created immutable memtable to disk
-    pub fn force_flush_next_imm_memtable(&self) -> Result<()> {
+    pub fn force_flush_next_memtable_imm(&self) -> Result<()> {
         unimplemented!()
     }
 
@@ -363,8 +387,8 @@ impl MiniLsm {
                 .force_freeze_memtable(&self.inner.state_lock.lock())?;
         }
 
-        if !self.inner.state.read().imm_memtable.is_empty() {
-            self.inner.force_flush_next_imm_memtable()?;
+        if !self.inner.state.read().memtable_imm.is_empty() {
+            self.inner.force_flush_next_memtable_imm()?;
         }
 
         Ok(())

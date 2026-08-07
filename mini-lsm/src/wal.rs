@@ -12,11 +12,12 @@ pub struct Wal {
 }
 
 impl Wal {
-    pub fn create<P>(_path: P) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
-        unimplemented!()
+    pub fn create(path: impl AsRef<Path>) -> Result<Self> {
+        let file = File::create(path)?;
+        let writer = BufWriter::new(file);
+        Ok(Self {
+            file: Arc::new(Mutex::new(writer)),
+        })
     }
 
     pub fn recover(_path: impl AsRef<Path>, _skiplist: &SkipMap<Bytes, Bytes>) -> Result<Self> {
