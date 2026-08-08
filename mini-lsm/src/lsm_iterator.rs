@@ -21,6 +21,10 @@ impl LsmIterator {
 impl StorageIterator for LsmIterator {
     type KeyType<'a> = &'a [u8];
 
+    fn next(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
     fn key(&self) -> Self::KeyType<'_> {
         unimplemented!()
     }
@@ -30,10 +34,6 @@ impl StorageIterator for LsmIterator {
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn next(&self) -> Result<()> {
         unimplemented!()
     }
 }
@@ -70,6 +70,10 @@ where
     where
         Self: 'a;
 
+    fn next(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
     fn key(&self) -> Self::KeyType<'_> {
         unimplemented!()
     }
@@ -79,10 +83,6 @@ where
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn next(&self) -> Result<()> {
         unimplemented!()
     }
 }

@@ -29,6 +29,10 @@ impl SstConcatIterator {
 impl StorageIterator for SstConcatIterator {
     type KeyType<'a> = KeySlice<'a>;
 
+    fn next(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
     fn key(&self) -> Self::KeyType<'_> {
         unimplemented!()
     }
@@ -39,13 +43,5 @@ impl StorageIterator for SstConcatIterator {
 
     fn is_valid(&self) -> bool {
         unimplemented!()
-    }
-
-    fn next(&self) -> Result<()> {
-        unimplemented!()
-    }
-
-    fn num_active_iterators(&self) -> usize {
-        1
     }
 }

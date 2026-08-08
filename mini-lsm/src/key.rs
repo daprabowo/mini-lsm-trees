@@ -98,7 +98,7 @@ impl Key<Bytes> {
         self.0.as_ref()
     }
 
-    pub fn for_testing_from_vec_no_ts(bytes: Bytes) -> Self {
+    pub fn for_testing_from_bytes_no_ts(bytes: Bytes) -> Self {
         Self(bytes)
     }
 }
@@ -121,11 +121,11 @@ impl<'a> Key<&'a [u8]> {
         self.0
     }
 
-    pub fn for_testing_from_vec_no_ts(slice: &'a [u8]) -> Self {
+    pub fn for_testing_from_slice_no_ts(slice: &'a [u8]) -> Self {
         Self(slice)
     }
 
-    pub fn for_testing_from_vec_ts(slice: &'a [u8], _ts: u64) -> Self {
+    pub fn for_testing_from_slice_with_ts(slice: &'a [u8], _ts: u64) -> Self {
         Self(slice)
     }
 }

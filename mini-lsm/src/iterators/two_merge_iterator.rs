@@ -28,6 +28,10 @@ where
 {
     type KeyType<'a> = R::KeyType<'a>;
 
+    fn next(&mut self) -> Result<()> {
+        unimplemented!()
+    }
+
     fn key(&self) -> Self::KeyType<'_> {
         unimplemented!()
     }
@@ -37,10 +41,6 @@ where
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn next(&self) -> Result<()> {
         unimplemented!()
     }
 }

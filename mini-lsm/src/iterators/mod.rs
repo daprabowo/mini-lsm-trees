@@ -7,17 +7,17 @@ pub trait StorageIterator {
     where
         Self: 'a;
 
-    /// Get the current value.
-    fn value(&self) -> &[u8];
+    /// Move to the next position.
+    fn next(&mut self) -> anyhow::Result<()>;
 
     /// Get the current value.
     fn key(&self) -> Self::KeyType<'_>;
 
+    /// Get the current value.
+    fn value(&self) -> &[u8];
+
     /// Check if the current iterator is valid
     fn is_valid(&self) -> bool;
-
-    /// Move to the next position.
-    fn next(&self) -> anyhow::Result<()>;
 
     /// Number of underlying active iterators for this iterator.
     fn num_active_iterators(&self) -> usize {

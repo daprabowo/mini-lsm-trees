@@ -39,6 +39,12 @@ impl SsTableIterator {
 impl StorageIterator for SsTableIterator {
     type KeyType<'a> = KeySlice<'a>;
 
+    /// Move to the next `key` in the block.
+    fn next(&mut self) -> Result<()> {
+        // NOTE: You may want to check if the current block iterator is valid after the move.
+        unimplemented!()
+    }
+
     /// Return the `key` that'a held by the underlying block iterator.
     fn key(&self) -> Self::KeyType<'_> {
         unimplemented!()
@@ -51,12 +57,6 @@ impl StorageIterator for SsTableIterator {
 
     /// Return whether the current block iterator is valid or not.
     fn is_valid(&self) -> bool {
-        unimplemented!()
-    }
-
-    /// Move to the next `key` in the block.
-    fn next(&self) -> Result<()> {
-        // NOTE: You may want to check if the current block iterator is valid after the move.
         unimplemented!()
     }
 }

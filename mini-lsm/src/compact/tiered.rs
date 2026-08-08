@@ -10,11 +10,11 @@ pub struct TieredCompactionTask {
 
 #[derive(Debug, Clone)]
 pub struct TieredCompactionOptions {
-    pub max_tiers: usize,
-    pub max_size_amplification_percent: usize,
+    pub tiers_count: usize,
+    pub size_amplification_percent_max: usize,
     pub size_ratio: usize,
-    pub min_merge_width: usize,
-    pub max_merge_width: Option<usize>,
+    pub merge_width_min: usize,
+    pub merge_width_max: Option<usize>,
 }
 
 pub struct TieredCompactionController {

@@ -68,12 +68,12 @@ fn test_task2_storage_integration() {
         LsmStorageInner::open(dir.path(), LsmStorageOptions::default_for_week1_test()).unwrap(),
     );
     assert_eq!(&storage.get(b"0").unwrap(), &None);
-    storage.put(b"1", b"233").unwrap();
-    storage.put(b"2", b"2333").unwrap();
-    storage.put(b"3", b"23333").unwrap();
-    assert_eq!(&storage.get(b"1").unwrap().unwrap()[..], b"233");
-    assert_eq!(&storage.get(b"2").unwrap().unwrap()[..], b"2333");
-    assert_eq!(&storage.get(b"3").unwrap().unwrap()[..], b"23333");
+    storage.put(b"1", b"123").unwrap();
+    storage.put(b"2", b"1234").unwrap();
+    storage.put(b"3", b"12345").unwrap();
+    assert_eq!(&storage.get(b"1").unwrap().unwrap()[..], b"123");
+    assert_eq!(&storage.get(b"2").unwrap().unwrap()[..], b"1234");
+    assert_eq!(&storage.get(b"3").unwrap().unwrap()[..], b"12345");
     storage.delete(b"2").unwrap();
     assert!(&storage.get(b"2").unwrap().is_none());
     storage.delete(b"0").unwrap();
@@ -85,9 +85,9 @@ fn test_task3_storage_integration() {
     let storage = Arc::new(
         LsmStorageInner::open(dir.path(), LsmStorageOptions::default_for_week1_test()).unwrap(),
     );
-    storage.put(b"1", b"233").unwrap();
-    storage.put(b"2", b"2333").unwrap();
-    storage.put(b"3", b"23333").unwrap();
+    storage.put(b"1", b"123").unwrap();
+    storage.put(b"2", b"1234").unwrap();
+    storage.put(b"3", b"12345").unwrap();
     storage
         .force_freeze_memtable(&storage.state_lock.lock())
         .unwrap();
@@ -95,9 +95,9 @@ fn test_task3_storage_integration() {
 
     let previous_approximate_size = storage.state.read().memtable_imm[0].approximate_size();
     assert!(previous_approximate_size >= 15);
-    storage.put(b"1", b"2333").unwrap();
-    storage.put(b"2", b"23333").unwrap();
-    storage.put(b"3", b"233333").unwrap();
+    storage.put(b"1", b"1234").unwrap();
+    storage.put(b"2", b"12345").unwrap();
+    storage.put(b"3", b"123456").unwrap();
     storage
         .force_freeze_memtable(&storage.state_lock.lock())
         .unwrap();
@@ -119,7 +119,7 @@ fn test_task3_freeze_on_capacity() {
     let storage = Arc::new(LsmStorageInner::open(dir.path(), options).unwrap());
 
     for _ in 0..1000 {
-        storage.put(b"1", b"2333").unwrap();
+        storage.put(b"1", b"1234").unwrap();
     }
 
     let num_imm_memtables = storage.state.read().memtable_imm.len();
@@ -142,25 +142,25 @@ fn test_task4_storage_integration() {
         LsmStorageInner::open(dir.path(), LsmStorageOptions::default_for_week1_test()).unwrap(),
     );
     assert_eq!(&storage.get(b"0").unwrap(), &None);
-    storage.put(b"1", b"233").unwrap();
-    storage.put(b"2", b"2333").unwrap();
-    storage.put(b"3", b"23333").unwrap();
+    storage.put(b"1", b"123").unwrap();
+    storage.put(b"2", b"1234").unwrap();
+    storage.put(b"3", b"12345").unwrap();
     storage
         .force_freeze_memtable(&storage.state_lock.lock())
         .unwrap();
     assert_eq!(storage.state.read().memtable_imm.len(), 1);
     storage.delete(b"1").unwrap();
     storage.delete(b"2").unwrap();
-    storage.put(b"3", b"2333").unwrap();
-    storage.put(b"4", b"23333").unwrap();
+    storage.put(b"3", b"1234").unwrap();
+    storage.put(b"4", b"12345").unwrap();
     storage
         .force_freeze_memtable(&storage.state_lock.lock())
         .unwrap();
-    storage.put(b"1", b"233333").unwrap();
-    storage.put(b"3", b"233333").unwrap();
+    storage.put(b"1", b"123456").unwrap();
+    storage.put(b"3", b"123456").unwrap();
     assert_eq!(storage.state.read().memtable_imm.len(), 2);
-    assert_eq!(&storage.get(b"1").unwrap().unwrap()[..], b"233333");
+    assert_eq!(&storage.get(b"1").unwrap().unwrap()[..], b"123456");
     assert_eq!(&storage.get(b"2").unwrap(), &None);
-    assert_eq!(&storage.get(b"3").unwrap().unwrap()[..], b"233333");
-    assert_eq!(&storage.get(b"4").unwrap().unwrap()[..], b"23333");
+    assert_eq!(&storage.get(b"3").unwrap().unwrap()[..], b"123456");
+    assert_eq!(&storage.get(b"4").unwrap().unwrap()[..], b"12345");
 }

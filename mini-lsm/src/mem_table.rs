@@ -148,7 +148,7 @@ pub struct MemTableIterator {
 impl StorageIterator for MemTableIterator {
     type KeyType<'a> = KeySlice<'a>;
 
-    fn value(&self) -> &[u8] {
+    fn next(&mut self) -> Result<()> {
         unimplemented!()
     }
 
@@ -156,11 +156,11 @@ impl StorageIterator for MemTableIterator {
         unimplemented!()
     }
 
-    fn is_valid(&self) -> bool {
+    fn value(&self) -> &[u8] {
         unimplemented!()
     }
 
-    fn next(&self) -> Result<()> {
+    fn is_valid(&self) -> bool {
         unimplemented!()
     }
 }
