@@ -7,12 +7,17 @@ use std::{
     },
 };
 
-use anyhow::Result;
+use anyhow::{Result, anyhow, bail};
 use bytes::Bytes;
-use crossbeam_skiplist::SkipMap;
+use crossbeam_skiplist::{SkipMap, map::Entry};
 use ouroboros::self_referencing;
 
-use crate::{iterators::StorageIterator, key::KeySlice, table::SsTableBuilder, wal::Wal};
+use crate::{
+    iterators::StorageIterator,
+    key::{Key, KeySlice},
+    table::SsTableBuilder,
+    wal::Wal,
+};
 
 /// A basic mem-table based on crossbeam-skiplist.
 pub struct MemTable {
@@ -104,7 +109,12 @@ impl MemTable {
 
     /// Get an iterator over a range of keys.
     pub fn scan(&self, lower: Bound<&[u8]>, upper: Bound<&[u8]>) -> MemTableIterator {
-        unimplemented!()
+        let map = Arc::clone(&self.map);
+        let bounds = (map_bound(lower), map_bound(upper));
+        let mut iter =
+            MemTableIterator::new(map, |map| map.range(bounds), (Bytes::new(), Bytes::new()));
+        iter.next().unwrap();
+        iter
     }
 
     /// Flush the mem-table to SSTable.
@@ -145,22 +155,32 @@ pub struct MemTableIterator {
     item: (Bytes, Bytes),
 }
 
+impl MemTableIterator {
+    fn entry_to_item(entry: Option<Entry<'_, Bytes, Bytes>>) -> (Bytes, Bytes) {
+        entry
+            .map(|e| (e.key().clone(), e.value().clone()))
+            .unwrap_or_else(|| (Bytes::from_static(&[]), Bytes::from_static(&[])))
+    }
+}
+
 impl StorageIterator for MemTableIterator {
     type KeyType<'a> = KeySlice<'a>;
 
     fn next(&mut self) -> Result<()> {
-        unimplemented!()
+        let item = self.with_iter_mut(|iter| Self::entry_to_item(iter.next()));
+        self.with_mut(|this| *this.item = item);
+        Ok(())
     }
 
     fn key(&self) -> Self::KeyType<'_> {
-        unimplemented!()
+        Key::from_slice(&self.borrow_item().0[..])
     }
 
     fn value(&self) -> &[u8] {
-        unimplemented!()
+        &self.borrow_item().1[..]
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
+        !self.borrow_item().0.is_empty()
     }
 }
