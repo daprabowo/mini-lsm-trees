@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 
 use crate::{
     iterators::{StorageIterator, merge_iterator::MergeIterator},
@@ -84,18 +84,31 @@ where
         Self: 'a;
 
     fn next(&mut self) -> Result<()> {
-        unimplemented!()
+        if self.has_errored {
+            bail!("iterator has errored");
+        }
+
+        if !self.is_valid() {
+            return Ok(());
+        }
+
+        if let Err(e) = self.iter.next() {
+            self.has_errored = true;
+            return Err(e);
+        }
+
+        Ok(())
     }
 
     fn key(&self) -> Self::KeyType<'_> {
-        unimplemented!()
+        self.iter.key()
     }
 
     fn value(&self) -> &[u8] {
-        unimplemented!()
+        self.iter.value()
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
+        !self.has_errored && self.iter.is_valid()
     }
 }
