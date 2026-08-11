@@ -16,9 +16,10 @@ use crate::{
         LeveledCompactionOptions, SimpleLeveledCompactionController,
         SimpleLeveledCompactionOptions, TieredCompactionController,
     },
+    iterators::merge_iterator::MergeIterator,
     lsm_iterator::{FusedIterator, LsmIterator},
     manifest::Manifest,
-    mem_table::MemTable,
+    mem_table::{MemTable, MemTableIterator},
     mvcc::LsmMvccInner,
     table::SsTable,
 };
@@ -229,6 +230,27 @@ impl LsmStorageInner {
         self.put(key, [])
     }
 
+    /// Create an iterator over a range of keys.
+    pub fn scan(
+        &self,
+        lower: Bound<&[u8]>,
+        upper: Bound<&[u8]>,
+    ) -> Result<FusedIterator<LsmIterator>> {
+        let snapshot = self.snapshot_state();
+
+        let active_iter = std::iter::once(Box::new(snapshot.memtable.scan(lower, upper)));
+        let imm_iters = snapshot
+            .memtable_imm
+            .iter()
+            .map(|memtable| Box::new(memtable.scan(lower, upper)));
+        let mem_iters: Vec<Box<MemTableIterator>> = active_iter.chain(imm_iters).collect();
+
+        let merged_iter = MergeIterator::create(mem_iters);
+        let lsm_iter = LsmIterator::new(merged_iter)?;
+
+        Ok(FusedIterator::new(lsm_iter))
+    }
+
     /// Write a batch of data into the storage.
     pub fn write_batch<T>(&self, _batch: &[WriteBatchRecord<T>]) -> Result<()>
     where
@@ -285,15 +307,6 @@ impl LsmStorageInner {
     pub fn new_txn(&self) -> Result<()> {
         // no-op
         Ok(())
-    }
-
-    /// Create an iterator over a range of keys.
-    pub fn scan(
-        &self,
-        _lower: Bound<&[u8]>,
-        _upper: Bound<&[u8]>,
-    ) -> Result<FusedIterator<LsmIterator>> {
-        unimplemented!()
     }
 }
 
