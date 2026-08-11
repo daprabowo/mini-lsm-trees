@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    ops::Bound,
+    ops::{Bound, RangeBounds},
     path::{Path, PathBuf},
     sync::{Arc, atomic::AtomicUsize},
 };
@@ -19,8 +19,9 @@ use crate::{
     iterators::merge_iterator::MergeIterator,
     lsm_iterator::{FusedIterator, LsmIterator},
     manifest::Manifest,
-    mem_table::{MemTable, MemTableIterator},
+    mem_table::{MemTable, MemTableIterator, map_bound},
     mvcc::LsmMvccInner,
+    range::LsmRange,
     table::SsTable,
 };
 
@@ -230,6 +231,10 @@ impl LsmStorageInner {
         self.put(key, [])
     }
 
+    pub fn scan_range(&self, range: impl LsmRange) -> Result<FusedIterator<LsmIterator>> {
+        self.scan(range.start(), range.end())
+    }
+
     /// Create an iterator over a range of keys.
     pub fn scan(
         &self,
@@ -331,10 +336,6 @@ impl Drop for MiniLsm {
 }
 
 impl MiniLsm {
-    pub fn close(&self) -> Result<()> {
-        unimplemented!()
-    }
-
     /// Start the storge engine bye either loading an existing directory or creating a new one if
     /// the directory does not exist.
     pub fn open<P>(path: P, options: LsmStorageOptions) -> Result<Arc<Self>>
@@ -353,6 +354,10 @@ impl MiniLsm {
             flush_notifier: tx2,
             flush_thread: Mutex::new(flush_thread),
         }))
+    }
+
+    pub fn close(&self) -> Result<()> {
+        unimplemented!()
     }
 
     pub fn new_txn(&self) -> Result<()> {
@@ -384,6 +389,10 @@ impl MiniLsm {
 
     pub fn sync(&self) -> Result<()> {
         self.inner.sync()
+    }
+
+    pub fn scan_range(&self, range: impl LsmRange) -> Result<FusedIterator<LsmIterator>> {
+        self.inner.scan_range(range)
     }
 
     pub fn scan(
