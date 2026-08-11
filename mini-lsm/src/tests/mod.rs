@@ -77,7 +77,7 @@ impl StorageIterator for MockIterator {
         {
             panic!("invalid access after next returns an error!");
         }
-        self.data[self.index].0.as_ref()
+        self.data[self.index].1.as_ref()
     }
 
     fn is_valid(&self) -> bool {

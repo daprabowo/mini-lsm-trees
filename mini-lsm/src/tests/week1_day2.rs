@@ -120,8 +120,8 @@ fn test_task2_merge_1() {
 
     let mut iter = MergeIterator::create(vec![
         Box::new(i3.clone()),
-        Box::new(i2.clone()),
         Box::new(i1.clone()),
+        Box::new(i2.clone()),
     ]);
 
     check_iter_result_by_key(
