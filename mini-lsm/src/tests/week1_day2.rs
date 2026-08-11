@@ -82,6 +82,30 @@ fn test_task1_empty_memtable_iter() {
 }
 
 #[test]
+fn test_memtable_iterator_concurrency() {
+    let memtable = MemTable::create(0);
+    memtable.for_testing_put_slice(b"key1", b"value1").unwrap();
+
+    let mut iter = memtable.scan(Bound::Unbounded, Bound::Unbounded);
+    assert_eq!(iter.key().for_testing_key_ref(), b"key1");
+    assert_eq!(iter.value(), b"value1");
+
+    let handle = std::thread::spawn(move || {
+        memtable.for_testing_put_slice(b"key2", b"value2").unwrap();
+    });
+
+    handle.join();
+
+    iter.next().unwrap();
+    assert!(iter.is_valid());
+    assert_eq!(iter.key().for_testing_key_ref(), b"key2");
+    assert_eq!(iter.value(), b"value2");
+
+    iter.next().unwrap();
+    assert!(!iter.is_valid());
+}
+
+#[test]
 fn test_task2_merge_1() {
     let i1 = MockIterator::new(vec![
         (Bytes::from("a"), Bytes::from("1.1")),
@@ -322,7 +346,7 @@ fn test_task4_integration() {
 }
 
 #[test]
-fn test_task4_range_integration() {
+fn test_lsm_range_integration() {
     let dir = tempdir().unwrap();
     let storage = Arc::new(
         LsmStorageInner::open(dir.path(), LsmStorageOptions::default_for_week1_test()).unwrap(),

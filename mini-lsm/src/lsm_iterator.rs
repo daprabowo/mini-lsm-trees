@@ -8,6 +8,7 @@ use crate::{
 /// Represents the internal type for an LSM iterator.
 type LsmIteratorInner = MergeIterator<MemTableIterator>;
 
+/// A wrapper on merged memtable iterator, will filter tombstoned keys.
 pub struct LsmIterator {
     inner: LsmIteratorInner,
 }
