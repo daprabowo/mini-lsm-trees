@@ -82,12 +82,6 @@ where
 
         while let Some(mut top) = self.iters.peek_mut() {
             if top.1.key() == current.1.key() {
-                // top.1.next()?;
-                //
-                // if !top.1.is_valid() {
-                //     PeekMut::pop(top);
-                // }
-
                 if let Err(e) = top.1.next() {
                     PeekMut::pop(top);
                     return Err(e);
