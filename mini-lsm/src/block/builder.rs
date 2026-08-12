@@ -17,7 +17,7 @@ pub struct BlockBuilder {
 
 impl BlockBuilder {
     /// Creates a new block builder.
-    pub fn new(block_size: usize) {
+    pub fn new(block_size: usize) -> Self {
         unimplemented!()
     }
 

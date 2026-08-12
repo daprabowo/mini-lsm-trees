@@ -1,3 +1,7 @@
+mod week1_day1;
+mod week1_day2;
+mod week1_day3;
+
 use std::{
     collections::BTreeMap, ops::Bound, os::unix::fs::MetadataExt, path::Path, sync::Arc,
     time::Duration,
@@ -17,9 +21,6 @@ use crate::{
     lsm_storage::{LsmStorageInner, LsmStorageState, MiniLsm},
     table::{SsTable, SsTableBuilder, SsTableIterator},
 };
-
-mod week1_day1;
-mod week1_day2;
 
 #[derive(Clone)]
 pub struct MockIterator {

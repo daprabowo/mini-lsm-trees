@@ -22,7 +22,7 @@ impl Block {
     }
 
     /// Decode from the data layout, transform the inut `data` to a single `Block`
-    pub fn decode(&self) -> Self {
+    pub fn decode(data: &[u8]) -> Self {
         unimplemented!()
     }
 }
