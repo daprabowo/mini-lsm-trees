@@ -3,20 +3,20 @@ use std::sync::Arc;
 use bytes::{Buf, Bytes};
 
 use crate::{
-    block::{Block, builder::BlockBuilder, iterator::BlockIterator},
+    block::{Block, iterator::BlockIterator},
     key::{KeySlice, KeyVec},
 };
 
 #[test]
 fn test_block_build_single_key() {
-    let mut builder = BlockBuilder::new(16);
+    let mut builder = Block::builder(16);
     assert!(builder.add(KeySlice::for_testing_from_slice_no_ts(b"123"), b"123456"));
     builder.build();
 }
 
 #[test]
 fn test_block_build_full() {
-    let mut builder = BlockBuilder::new(16);
+    let mut builder = Block::builder(16);
     assert!(builder.add(KeySlice::for_testing_from_slice_no_ts(b"11"), b"11"));
     assert!(!builder.add(KeySlice::for_testing_from_slice_no_ts(b"22"), b"22"));
     builder.build();
@@ -24,7 +24,7 @@ fn test_block_build_full() {
 
 #[test]
 fn test_block_build_large_1() {
-    let mut builder = BlockBuilder::new(16);
+    let mut builder = Block::builder(16);
     assert!(builder.add(
         KeySlice::for_testing_from_slice_no_ts(b"11"),
         &b"1".repeat(100)
@@ -34,7 +34,7 @@ fn test_block_build_large_1() {
 
 #[test]
 fn test_block_build_large_2() {
-    let mut builder = BlockBuilder::new(16);
+    let mut builder = Block::builder(16);
     assert!(builder.add(KeySlice::for_testing_from_slice_no_ts(b"11"), b"1"));
     assert!(!builder.add(
         KeySlice::for_testing_from_slice_no_ts(b"11"),
@@ -56,7 +56,7 @@ fn num_of_keys() -> usize {
 }
 
 fn generate_block() -> Block {
-    let mut builder = BlockBuilder::new(10000);
+    let mut builder = Block::builder(10000);
     for idx in 0..num_of_keys() {
         let key = key_of(idx);
         let value = value_of(idx);
