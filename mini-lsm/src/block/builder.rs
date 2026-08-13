@@ -30,7 +30,7 @@ impl BlockBuilder {
 
     /// Adds a key-value pair to the block. Returns false when the block is full.
     /// You may find the `bytes::BufMut` trait useful for manipulating binary data.
-    #[must_use]
+    #[must_use = "empty block builder is not allowed"]
     pub fn add(&mut self, key: KeySlice, value: &[u8]) -> bool {
         let entry_size = std::mem::size_of::<u16>()
             + key.len()
@@ -73,5 +73,46 @@ impl BlockBuilder {
             data: self.data,
             offsets: self.offsets,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_block_build_single_key() {
+        let mut builder = Block::builder(16);
+        assert!(builder.add(KeySlice::for_testing_from_slice_no_ts(b"123"), b"123456"));
+        builder.build();
+    }
+
+    #[test]
+    fn test_block_build_full() {
+        let mut builder = Block::builder(16);
+        assert!(builder.add(KeySlice::for_testing_from_slice_no_ts(b"11"), b"11"));
+        assert!(!builder.add(KeySlice::for_testing_from_slice_no_ts(b"22"), b"22"));
+        builder.build();
+    }
+
+    #[test]
+    fn test_block_build_large_1() {
+        let mut builder = Block::builder(16);
+        assert!(builder.add(
+            KeySlice::for_testing_from_slice_no_ts(b"11"),
+            &b"1".repeat(100)
+        ));
+        builder.build();
+    }
+
+    #[test]
+    fn test_block_build_large_2() {
+        let mut builder = Block::builder(16);
+        assert!(builder.add(KeySlice::for_testing_from_slice_no_ts(b"11"), b"1"));
+        assert!(!builder.add(
+            KeySlice::for_testing_from_slice_no_ts(b"11"),
+            &b"1".repeat(100)
+        ));
+        builder.build();
     }
 }
