@@ -1,4 +1,6 @@
-use bytes::BufMut;
+use std::sync::Arc;
+
+use bytes::{BufMut, Bytes};
 
 use crate::{
     block::Block,
@@ -70,8 +72,8 @@ impl BlockBuilder {
     pub fn build(self) -> Block {
         assert!(!self.is_empty(), "unable to build an empty block");
         Block {
-            data: self.data,
-            offsets: self.offsets,
+            data: Bytes::from(self.data),
+            offsets: Arc::from(self.offsets),
         }
     }
 }

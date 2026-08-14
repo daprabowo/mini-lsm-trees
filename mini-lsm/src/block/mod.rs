@@ -12,8 +12,8 @@ pub type BlockCache = moka::sync::Cache<(usize, usize), Arc<Block>>;
 /// A block is the smallest unit of read and caching in LSM tree. It is a collection of sorted
 /// key-value pairs.
 pub struct Block {
-    pub(crate) data: Vec<u8>,
-    pub(crate) offsets: Vec<u16>,
+    pub(crate) data: Bytes,
+    pub(crate) offsets: Arc<[u16]>,
 }
 
 impl Block {
@@ -30,7 +30,7 @@ impl Block {
         let mut buf = BytesMut::with_capacity(estimated_size);
         buf.put(&self.data[..]);
 
-        for &offset in &self.offsets {
+        for &offset in self.offsets.iter() {
             buf.put_u16(offset);
         }
 
@@ -53,8 +53,8 @@ impl Block {
         }
 
         Self {
-            data: data[..offsets_start].to_vec(),
-            offsets,
+            data: Bytes::copy_from_slice(&data[..offsets_start]),
+            offsets: Arc::from(offsets),
         }
     }
 }

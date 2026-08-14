@@ -87,11 +87,37 @@ impl BlockIterator {
         let offset = self.block.offsets[idx] as usize;
         let mut data_ptr = &self.block.data[offset..];
 
+        if data_ptr.len() < std::mem::size_of::<u16>() {
+            self.key.clear();
+            self.value_range = (0, 0);
+            return;
+        }
+
         let key_len = data_ptr.get_u16() as usize;
+
+        if data_ptr.len() < key_len {
+            self.key.clear();
+            self.value_range = (0, 0);
+            return;
+        }
+
         let key = &data_ptr[..key_len];
         data_ptr.advance(key_len);
 
+        if data_ptr.len() < std::mem::size_of::<u16>() {
+            self.key.clear();
+            self.value_range = (0, 0);
+            return;
+        }
+
         let value_len = data_ptr.get_u16() as usize;
+
+        if data_ptr.len() < value_len {
+            self.key.clear();
+            self.value_range = (0, 0);
+            return;
+        }
+
         let value_start =
             offset + std::mem::size_of::<u16>() + key_len + std::mem::size_of::<u16>();
         let value_end = value_start + value_len;
