@@ -88,13 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_block_encode() {
-        let block = generate_block();
-        block.encode();
-    }
-
-    #[test]
-    fn test_block_decode() {
+    fn test_block_codec_roundtrip() {
         let block = generate_block();
         let encoded = block.encode();
         let decoded = Block::decode(&encoded);
