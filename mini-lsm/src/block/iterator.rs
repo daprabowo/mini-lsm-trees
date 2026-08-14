@@ -51,6 +51,16 @@ impl BlockIterator {
         self.seek_to_index(self.idx + 1);
     }
 
+    pub fn prev(&mut self) {
+        if self.idx == 0 {
+            self.key.clear();
+            self.value_range = (0, 0);
+            return;
+        }
+
+        self.seek_to_index(self.idx - 1);
+    }
+
     /// Returns the key of the current entry.
     pub fn key(&self) -> KeySlice<'_> {
         self.key.as_key_slice()
@@ -69,6 +79,7 @@ impl BlockIterator {
     fn seek_to_index(&mut self, idx: usize) {
         if idx >= self.block.offsets.len() {
             self.key.clear();
+            self.value_range = (0, 0);
             self.idx = idx;
             return;
         }
@@ -147,28 +158,47 @@ mod tests {
     fn test_block_iterator() {
         let block = Arc::new(generate_block());
         let mut iter = BlockIterator::create_and_seek_to_first(block);
-        for _ in 0..5 {
-            for i in 0..num_of_keys() {
-                let key = iter.key();
-                let value = iter.value();
-                assert!(iter.is_valid());
-                assert_eq!(
-                    key.for_testing_key_ref(),
-                    key_of(i).for_testing_key_ref(),
-                    "expected key: {:?}, actual key: {:?}",
-                    as_bytes(key_of(i).for_testing_key_ref()),
-                    as_bytes(key.for_testing_key_ref())
-                );
-                assert_eq!(
-                    value,
-                    value_of(i),
-                    "expected value: {:?}, actual value: {:?}",
-                    as_bytes(&value_of(i)),
-                    as_bytes(value)
-                );
-                iter.next();
-            }
-            iter.seek_to_first();
+
+        for i in 0..num_of_keys() {
+            let key = iter.key();
+            let value = iter.value();
+            assert!(iter.is_valid());
+            assert_eq!(
+                key.for_testing_key_ref(),
+                key_of(i).for_testing_key_ref(),
+                "expected key: {:?}, actual key: {:?}",
+                as_bytes(key_of(i).for_testing_key_ref()),
+                as_bytes(key.for_testing_key_ref())
+            );
+            assert_eq!(
+                value,
+                value_of(i),
+                "expected value: {:?}, actual value: {:?}",
+                as_bytes(&value_of(i)),
+                as_bytes(value)
+            );
+            iter.next();
+        }
+
+        for i in (0..num_of_keys()).rev() {
+            iter.prev();
+            let key = iter.key();
+            let value = iter.value();
+            assert!(iter.is_valid());
+            assert_eq!(
+                key.for_testing_key_ref(),
+                key_of(i).for_testing_key_ref(),
+                "expected key: {:?}, actual key: {:?}",
+                as_bytes(key_of(i).for_testing_key_ref()),
+                as_bytes(key.for_testing_key_ref())
+            );
+            assert_eq!(
+                value,
+                value_of(i),
+                "expected value: {:?}, actual value: {:?}",
+                as_bytes(&value_of(i)),
+                as_bytes(value)
+            );
         }
     }
 
