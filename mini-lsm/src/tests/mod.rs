@@ -1,6 +1,7 @@
 mod week1_day1;
 mod week1_day2;
 mod week1_day3;
+mod week1_day4;
 
 use std::{
     collections::BTreeMap, ops::Bound, os::unix::fs::MetadataExt, path::Path, sync::Arc,
