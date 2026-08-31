@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 
 pub const TS_ENABLED: bool = false;
 
@@ -84,6 +84,10 @@ impl Key<Bytes> {
     /// Create a `KeyBytes` from a `Bytes`.
     pub fn from_bytes(bytes: Bytes) -> Self {
         Self(bytes)
+    }
+
+    pub fn from_vec(vec: Vec<u8>) -> Self {
+        Self(Bytes::from(vec))
     }
 
     pub fn as_key_slice(&self) -> KeySlice<'_> {

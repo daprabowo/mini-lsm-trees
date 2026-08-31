@@ -8,7 +8,7 @@ pub use iterator::SsTableIterator;
 use std::{fs::File, os::unix::fs::FileExt, path::Path, sync::Arc};
 
 use anyhow::Result;
-use bytes::Buf;
+use bytes::{Buf, BufMut};
 
 use crate::{
     block::{Block, BlockCache},
@@ -29,17 +29,60 @@ pub struct BlockMeta {
 impl BlockMeta {
     /// Encode block meta to a buffer.
     pub fn encode_block_meta(block_meta: &[BlockMeta], buf: &mut Vec<u8>) {
-        // TODO: You may add extra fields to the buffer, in order to help keep track of `first_key` when
-        // decoding from the same buffer in the future.
-        unimplemented!()
+        if block_meta.is_empty() {
+            return;
+        }
+
+        let sample_meta = &block_meta[0];
+        let estimated_per_block = std::mem::size_of::<u32>()
+            + std::mem::size_of::<u32>()
+            + std::mem::size_of::<u16>()
+            + sample_meta.first_key.raw_ref().len()
+            + std::mem::size_of::<u16>()
+            + sample_meta.last_key.raw_ref().len();
+        buf.reserve(estimated_per_block * block_meta.len());
+        buf.put_u32(block_meta.len() as u32);
+
+        for meta in block_meta {
+            let first_key_len = meta.first_key.len();
+            let last_key_len = meta.last_key.len();
+
+            let required_space = std::mem::size_of::<u32>()
+                + std::mem::size_of::<u16>()
+                + first_key_len
+                + std::mem::size_of::<u16>()
+                + last_key_len;
+            buf.reserve(required_space);
+
+            buf.put_u32(meta.offset as u32);
+            buf.put_u16(meta.first_key.raw_ref().len() as u16);
+            buf.extend_from_slice(meta.first_key.raw_ref());
+            buf.put_u16(meta.last_key.raw_ref().len() as u16);
+            buf.extend_from_slice(meta.last_key.raw_ref());
+        }
     }
 
     /// Decode block meta from a buffer
-    pub fn decode_block_meta<B>(buf: B) -> Vec<BlockMeta>
-    where
-        B: Buf,
-    {
-        unimplemented!()
+    pub fn decode_block_meta(buf: impl Buf) -> Vec<BlockMeta> {
+        let mut buf = buf;
+
+        let block_count = buf.get_u32() as usize;
+        let mut block_meta = Vec::with_capacity(block_count);
+
+        while buf.has_remaining() {
+            let offset = buf.get_u32() as usize;
+            let first_key_len = buf.get_u16() as usize;
+            let first_key = KeyBytes::from_bytes(buf.copy_to_bytes(first_key_len));
+            let last_key_len = buf.get_u16() as usize;
+            let last_key = KeyBytes::from_bytes(buf.copy_to_bytes(first_key_len));
+            block_meta.push(BlockMeta {
+                offset,
+                first_key,
+                last_key,
+            });
+        }
+
+        block_meta
     }
 }
 
@@ -60,10 +103,7 @@ impl FileObject {
     }
 
     /// Create a new file object and write the file to the disk.
-    pub fn create<P>(path: P, data: Vec<u8>) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
+    pub fn create(path: impl AsRef<Path>, data: Vec<u8>) -> Result<Self> {
         let path = path.as_ref();
         std::fs::write(path, &data)?;
         File::open(path)?.sync_all()?;
@@ -73,10 +113,7 @@ impl FileObject {
         ))
     }
 
-    pub fn open<P>(path: P) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let file = File::options().read(true).write(true).open(path)?;
         let size = file.metadata()?.len();
         Ok(FileObject(Some(file), size))
